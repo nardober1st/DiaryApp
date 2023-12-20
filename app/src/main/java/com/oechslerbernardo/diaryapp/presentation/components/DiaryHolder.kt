@@ -1,5 +1,10 @@
 package com.oechslerbernardo.diaryapp.presentation.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -17,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,6 +45,7 @@ import com.oechslerbernardo.diaryapp.model.Diary
 import com.oechslerbernardo.diaryapp.model.Mood
 import com.oechslerbernardo.diaryapp.ui.theme.Elevation
 import com.oechslerbernardo.diaryapp.util.toInstant
+import io.realm.kotlin.ext.realmListOf
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -50,6 +57,9 @@ fun DiaryHolder(diary: Diary, onClick: (String) -> Unit) {
     val localDensity = LocalDensity.current
     var componentHeight by remember {
         mutableStateOf(0.dp)
+    }
+    var galleryOpened by remember {
+        mutableStateOf(false)
     }
 
 
@@ -76,7 +86,7 @@ fun DiaryHolder(diary: Diary, onClick: (String) -> Unit) {
                 },
             tonalElevation = Elevation.Level1
         ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.fillMaxWidth()) {
                 DiaryHeader(moodName = diary.mood, time = diary.date.toInstant())
                 Text(
                     modifier = Modifier.padding(14.dp),
@@ -85,6 +95,27 @@ fun DiaryHolder(diary: Diary, onClick: (String) -> Unit) {
                     maxLines = 6,
                     overflow = TextOverflow.Ellipsis
                 )
+                if (diary.images.isNotEmpty()) {
+                    ShowGalleryButton(
+                        galleryOpened = galleryOpened,
+                        onClick = {
+                            galleryOpened = !galleryOpened
+                        }
+                    )
+                }
+                AnimatedVisibility(
+                    visible = galleryOpened,
+                    enter = fadeIn() + expandVertically(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessLow
+                        )
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(all = 14.dp)) {
+                        Gallery(images = diary.images)
+                    }
+                }
             }
         }
     }
@@ -126,6 +157,19 @@ fun DiaryHeader(moodName: String, time: Instant) {
     }
 }
 
+@Composable
+fun ShowGalleryButton(
+    galleryOpened: Boolean,
+    onClick: () -> Unit
+) {
+    TextButton(onClick = onClick) {
+        Text(
+            text = if (galleryOpened) "Hide Gallery" else "Show Gallery",
+            style = TextStyle(fontSize = MaterialTheme.typography.bodySmall.fontSize)
+        )
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 fun DiaryHolderPreview() {
@@ -135,6 +179,7 @@ fun DiaryHolderPreview() {
             description =
                 "Eu gosto, de te possuir, todinha pra mim, todinha pra mim, voce eh o amor da minha vida, eu te amo mais que tudo nesse mundo inteiro minha princesa linda e maravilhosa"
             mood = Mood.Happy.name
+            images = realmListOf("", "")
         },
         onClick = {})
 }
