@@ -1,10 +1,14 @@
 package com.oechslerbernardo.diaryapp.navigation
 
+import android.util.Log
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -19,12 +23,14 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.oechslerbernardo.diaryapp.data.repository.MongoDb
 import com.oechslerbernardo.diaryapp.model.Diary
+import com.oechslerbernardo.diaryapp.model.Mood
 import com.oechslerbernardo.diaryapp.presentation.components.DisplayAlertDialog
 import com.oechslerbernardo.diaryapp.presentation.screens.auth.AuthenticationScreen
 import com.oechslerbernardo.diaryapp.presentation.screens.auth.AuthenticationViewModel
 import com.oechslerbernardo.diaryapp.presentation.screens.home.HomeScreen
 import com.oechslerbernardo.diaryapp.presentation.screens.home.HomeViewModel
 import com.oechslerbernardo.diaryapp.presentation.screens.write.WriteScreen
+import com.oechslerbernardo.diaryapp.presentation.screens.write.WriteViewModel
 import com.oechslerbernardo.diaryapp.util.Constants.APP_ID
 import com.oechslerbernardo.diaryapp.util.Constants.WRITE_SCREEN_ARGUMENT_KEY
 import com.oechslerbernardo.diaryapp.util.RequestState
@@ -56,6 +62,9 @@ fun SetUpNavGraph(
         homeRoute(
             navigateToWrite = {
                 navController.navigate(Screen.Write.route)
+            },
+            navigateToWriteWithArgs = {
+                navController.navigate(Screen.Write.passDiaryId(diaryId = it))
             },
             navigateToAuth = {
                 navController.popBackStack()
@@ -118,6 +127,7 @@ fun NavGraphBuilder.authenticationRoute(
 
 fun NavGraphBuilder.homeRoute(
     navigateToWrite: () -> Unit,
+    navigateToWriteWithArgs: (String) -> Unit,
     navigateToAuth: () -> Unit,
     onDataLoaded: () -> Unit
 ) {
@@ -144,6 +154,7 @@ fun NavGraphBuilder.homeRoute(
                     drawerState.open()
                 }
             },
+            navigateToWriteWithArgs = navigateToWriteWithArgs,
             navigateToWrite = navigateToWrite,
             onDeleteAllClicked = {},
             onSignOutClicked = {
@@ -175,6 +186,7 @@ fun NavGraphBuilder.homeRoute(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 fun NavGraphBuilder.writeRoute(
     onBackPressed: () -> Unit
 ) {
@@ -186,10 +198,32 @@ fun NavGraphBuilder.writeRoute(
             defaultValue = null
         })
     ) {
+        val viewModel: WriteViewModel = viewModel()
+        val uiState = viewModel.uiState
+        val pagerState = rememberPagerState(pageCount = { Mood.values().size })
+        val pageNumber by remember {
+            derivedStateOf { pagerState.currentPage }
+        }
+
+        LaunchedEffect(key1 = uiState) {
+            Log.d("SelectedDiary", "${uiState.selectedDiaryId}")
+        }
+
         WriteScreen(
-            selectedDiary = null,
             onDeleteConfirmed = {},
-            onBackPressed = onBackPressed
+            onBackPressed = onBackPressed,
+            moodName = { Mood.values()[pageNumber].name },
+            pagerState = pagerState,
+            uiState = uiState,
+            onDescriptionChanged = { viewModel.setDescription(description = it) },
+            onTitleChanged = { viewModel.setTitle(title = it) },
+            onSaveClicked = {
+                viewModel.insertDiary(
+                    diary = it.apply { mood = Mood.values()[pageNumber].name },
+                    onSuccess = onBackPressed,
+                    onError = {}
+                )
+            }
         )
     }
 }
