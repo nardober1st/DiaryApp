@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import com.oechslerbernardo.diaryapp.model.Diary
 import com.oechslerbernardo.diaryapp.model.Mood
+import java.time.ZonedDateTime
 
 @OptIn(ExperimentalFoundationApi::class)
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
@@ -21,6 +22,7 @@ fun WriteScreen(
     onDescriptionChanged: (String) -> Unit,
     onDeleteConfirmed: () -> Unit,
     onSaveClicked: (Diary) -> Unit,
+    onUpdatedDateTime: (ZonedDateTime) -> Unit
 ) {
 
     // Update the Mood when selecting an existin Diary
@@ -34,7 +36,8 @@ fun WriteScreen(
                 selectedDiary = uiState.selectedDiary,
                 moodName = moodName,
                 onDeleteConfirmed = onDeleteConfirmed,
-                onBackPressed = onBackPressed
+                onBackPressed = onBackPressed,
+                onUpdatedDateTime = onUpdatedDateTime
             )
         },
         content = { paddingValues ->

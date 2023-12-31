@@ -41,6 +41,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.lang.Exception
+import java.time.ZonedDateTime
 import kotlin.math.sign
 
 @Composable
@@ -206,7 +207,7 @@ fun NavGraphBuilder.writeRoute(
         }
 
         LaunchedEffect(key1 = uiState) {
-            Log.d("SelectedDiary", "${uiState.selectedDiaryId}")
+            Log.d("TAGY", "${uiState.selectedDiaryId}")
         }
 
         WriteScreen(
@@ -218,11 +219,14 @@ fun NavGraphBuilder.writeRoute(
             onDescriptionChanged = { viewModel.setDescription(description = it) },
             onTitleChanged = { viewModel.setTitle(title = it) },
             onSaveClicked = {
-                viewModel.insertDiary(
+                viewModel.upsertDiary(
                     diary = it.apply { mood = Mood.values()[pageNumber].name },
                     onSuccess = onBackPressed,
                     onError = {}
                 )
+            },
+            onUpdatedDateTime = {
+                viewModel.updateDateTime(zonedDateTime = it)
             }
         )
     }

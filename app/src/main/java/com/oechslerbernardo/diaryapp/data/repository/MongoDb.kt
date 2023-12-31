@@ -1,5 +1,6 @@
 package com.oechslerbernardo.diaryapp.data.repository
 
+import android.util.Log
 import com.oechslerbernardo.diaryapp.model.Diary
 import com.oechslerbernardo.diaryapp.util.Constants.APP_ID
 import com.oechslerbernardo.diaryapp.util.RequestState
@@ -48,6 +49,7 @@ object MongoDb : MongoRepository {
                     .sort(property = "date", sortOrder = Sort.DESCENDING)
                     .asFlow()
                     .map { result ->
+                        Log.d("TAGY", "Diaries fetched: ${result.list}")
                         RequestState.Success(
                             data = result.list.groupBy {
                                 it.date.toInstant()
@@ -64,20 +66,21 @@ object MongoDb : MongoRepository {
         }
     }
 
-    override fun getSelectedDiary(diaryId: ObjectId): RequestState<Diary> {
+    override fun getSelectedDiary(diaryId: ObjectId): Flow<RequestState<Diary>> {
         return if (user != null) {
             try {
-                val diary = realm.query<Diary>(query = "_id == $0", diaryId).find().first()
-                RequestState.Success(diary)
+                realm.query<Diary>(query = "_id == $0", diaryId).asFlow().map {
+                    RequestState.Success(it.list.first())
+                }
             } catch (e: Exception) {
-                RequestState.Error(e)
+                flow { emit(RequestState.Error(e)) }
             }
         } else {
-            RequestState.Error(UserNotAuthenticatedException())
+            flow { emit(RequestState.Error(UserNotAuthenticatedException())) }
         }
     }
 
-    override suspend fun addNewDiary(diary: Diary): RequestState<Diary> {
+    override suspend fun insertDiary(diary: Diary): RequestState<Diary> {
         return if (user != null) {
             realm.write {
                 try {
@@ -85,6 +88,26 @@ object MongoDb : MongoRepository {
                     RequestState.Success(data = addedDiary)
                 } catch (e: Exception) {
                     RequestState.Error(e)
+                }
+            }
+        } else {
+            RequestState.Error(UserNotAuthenticatedException())
+        }
+    }
+
+    override suspend fun updateDiary(diary: Diary): RequestState<Diary> {
+        return if (user != null) {
+            realm.write {
+                val queriedDiary = query<Diary>(query = "_id == $0", diary._id).first().find()
+                if (queriedDiary != null) {
+                    queriedDiary.title = diary.title
+                    queriedDiary.description = diary.description
+                    queriedDiary.mood = diary.mood
+                    queriedDiary.images = diary.images
+                    queriedDiary.date = diary.date
+                    RequestState.Success(data = queriedDiary)
+                } else {
+                    RequestState.Error(error = Exception("Queried Diary does not exist"))
                 }
             }
         } else {
