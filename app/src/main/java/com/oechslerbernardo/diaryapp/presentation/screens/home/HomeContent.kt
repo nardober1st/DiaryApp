@@ -43,9 +43,6 @@ fun HomeContent(
                 .padding(horizontal = 24.dp)
                 .navigationBarsPadding()
                 .padding(top = paddingValues.calculateTopPadding())
-                .padding(bottom = paddingValues.calculateBottomPadding())
-                .padding(end = paddingValues.calculateEndPadding(LayoutDirection.Ltr))
-                .padding(start = paddingValues.calculateStartPadding(LayoutDirection.Ltr))
         ) {
             diaryNotes.forEach { (localDate, diaries) ->
                 stickyHeader(key = localDate) {

@@ -14,6 +14,7 @@ import com.oechslerbernardo.diaryapp.util.RequestState
 import com.oechslerbernardo.diaryapp.util.toRealmInstant
 import io.realm.kotlin.types.RealmInstant
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.mongodb.kbson.ObjectId
@@ -44,6 +45,9 @@ class WriteViewModel(
         if (uiState.selectedDiaryId != null) {
             viewModelScope.launch(Dispatchers.Main) {
                 MongoDb.getSelectedDiary(diaryId = ObjectId.invoke(uiState.selectedDiaryId!!))
+                    .catch {
+                        emit(RequestState.Error(Exception("Diary is already deleted")))
+                    }
                     .collect { diary ->
                         if (diary is RequestState.Success) {
                             setSelectedDiary(diary = diary.data)
@@ -131,6 +135,29 @@ class WriteViewModel(
             }
         } else if (result is RequestState.Error) {
             onError(result.error.message.toString())
+        }
+    }
+
+    fun deleteDiary(
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (uiState.selectedDiaryId != null) {
+                val result =
+                    MongoDb.deleteDiary(
+                        id = io.realm.kotlin.types.ObjectId.Companion.from(uiState.selectedDiaryId!!)
+                    )
+                if (result is RequestState.Success) {
+                    withContext(Dispatchers.Main) {
+                        onSuccess()
+                    }
+                } else if (result is RequestState.Error) {
+                    withContext(Dispatchers.Main) {
+                        onError(result.error.message.toString())
+                    }
+                }
+            }
         }
     }
 }
